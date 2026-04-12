@@ -50,7 +50,7 @@ router.get('/', auth, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// ⚪ GET: Fetch Single Errand Details (Safely located here to prevent collisions)
+// ⚪ GET: Single Errand Details
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -76,19 +76,17 @@ router.delete('/:id', auth, async (req, res) => {
     
     if (errand.rows.length === 0) return res.status(404).json({ error: 'Errand not found' });
 
-    // Force strict Number checking for database security
     if (Number(errand.rows[0].customer_id) !== Number(req.user.id)) {
       return res.status(403).json({ error: 'Not authorized to delete' });
     }
 
     await pool.query('DELETE FROM messages WHERE errand_id = $1', [id]);
     await pool.query('DELETE FROM errands WHERE id = $1', [id]);
-    
     res.json({ msg: 'Errand successfully removed' });
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// 🟣 PUT: Update Errand Status
+// 🟣 PUT: Update Errand Status (The 500 Fix is here)
 router.put('/:id/status', auth, async (req, res) => {
   try {
     const { status } = req.body;
@@ -116,6 +114,12 @@ router.put('/:id/status', auth, async (req, res) => {
       if (Number(errand.customer_id) !== userId) return res.status(403).json({ msg: 'Unauthorized customer' });
       query = 'UPDATE errands SET status = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *';
       values = [status, id];
+
+      // Send the payment notification
+      await pool.query(
+        'INSERT INTO notifications (user_id, content, type) VALUES ($1, $2, $3)',
+        [errand.helper_id, `Payment released for "${errand.title}"!`, 'payment']
+      );
     } else {
       return res.status(400).json({ msg: 'Invalid status transition' });
     }

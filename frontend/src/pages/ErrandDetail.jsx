@@ -2,13 +2,17 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import { formatBudget } from '../Utils/formatters';
 import { 
   ArrowLeft, MapPin, Clock, Trash2, CheckCircle, 
   Navigation, PackageCheck, MessageSquare, 
-  ShoppingCart, Package, Pill, Shirt, Utensils, Zap 
+  ShoppingCart, Package, Pill, Shirt, Utensils, Zap,
+  Loader2, Wallet, Info, ShieldCheck 
 } from 'lucide-react';
 
-// 🛠️ SMART ICON ENGINE (Synced with Dashboard)
+// ... rest of your code starts here (const CATEGORIES = ...)
+
+// 🛠️ SMART ICON ENGINE
 const CATEGORIES = [
   { name: 'Grocery', icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-100' },
   { name: 'Package', icon: Package, color: 'text-blue-600', bg: 'bg-blue-100' },
@@ -22,188 +26,189 @@ const getCategoryConfig = (categoryName) => {
   return CATEGORIES.find(c => c.name === categoryName) || CATEGORIES[CATEGORIES.length - 1];
 };
 
-const ErrandDetail = () => {
+const ErrandDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
   const [errand, setErrand] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [showReview, setShowReview] = useState(false);
 
-  const fetchErrand = async () => {
+  const fetchDetails = async () => {
     try {
       const res = await axios.get(`http://localhost:5000/api/errands/${id}`);
       setErrand(res.data);
-    } catch (err) {
-      console.error("Failed to fetch errand");
-    }
+    } catch (err) { console.error("Error fetching details"); }
+    finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchErrand();
-  }, [id]);
+  useEffect(() => { fetchDetails(); }, [id]);
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to permanently delete this errand?")) {
-      try {
-        await axios.delete(`http://localhost:5000/api/errands/${id}`);
-        navigate('/'); 
-      } catch (err) { 
-        alert(err.response?.data?.error || "Failed to delete."); 
-      }
-    }
+    if (!window.confirm("Permanently delete this errand?")) return;
+    try {
+      await axios.delete(`http://localhost:5000/api/errands/${id}`);
+      navigate('/'); 
+    } catch (err) { alert("Delete failed."); }
   };
 
- const updateStatus = async (newStatus) => {
+  const updateStatus = async (newStatus) => {
     try {
       await axios.put(`http://localhost:5000/api/errands/${id}/status`, { status: newStatus });
-      fetchErrand(); 
-      
-      // 🛠️ AUTO-TRIGGER REVIEW MODAL
-      if (newStatus === 'completed') {
-          setShowReview(true);
-      }
+      fetchDetails(); 
+      if (newStatus === 'completed') setShowReview(true);
     } catch (err) { alert("Update failed"); }
-};
+  };
 
-  if (!errand || !user) return <div className="p-8 text-center mt-20 text-muted-foreground">Loading details...</div>;
+  if (loading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-primary" /></div>;
+  if (!errand) return <div className="p-10 text-center text-muted-foreground uppercase font-black">Errand not found</div>;
 
   const isMyErrand = Number(user.id) === Number(errand.customer_id);
   const isMyJob = Number(user.id) === Number(errand.helper_id);
   const catConfig = getCategoryConfig(errand.category);
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="min-h-screen bg-background pb-24 animate-fadeSlideIn">
       {/* HEADER */}
-      <div className="bg-card border-b border-border p-4 sticky top-0 z-50 flex items-center justify-between shadow-sm">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-secondary rounded-full transition">
-          <ArrowLeft size={20} />
-        </button>
-        <h1 className="font-bold text-foreground">Errand Details</h1>
-        
-        {/* SECURE DELETE BUTTON */}
+      <div className="bg-card/80 backdrop-blur-md border-b border-border p-4 sticky top-0 z-50 flex items-center justify-between">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-secondary rounded-full transition"><ArrowLeft size={20} /></button>
+        <h1 className="font-black text-xs uppercase tracking-widest">Errand Details</h1>
         {isMyErrand && (errand.status === 'open' || errand.status === 'posted') ? (
-          <button onClick={handleDelete} className="p-2 text-destructive hover:bg-destructive/10 rounded-full transition">
-            <Trash2 size={20} />
-          </button>
-        ) : <div className="w-8"></div>}
+          <button onClick={handleDelete} className="p-2 text-destructive hover:bg-destructive/10 rounded-full transition"><Trash2 size={20} /></button>
+        ) : <div className="w-10"></div>}
       </div>
 
-      {/* HERO SECTION (Now using Icons) */}
-      <div className={`w-full h-48 flex items-center justify-center relative ${catConfig.bg}`}>
-        <catConfig.icon size={80} className={catConfig.color} />
-        <div className="absolute bottom-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-bold shadow-sm uppercase tracking-wider text-primary">
+      {/* HERO SECTION */}
+      <div className={`w-full h-52 flex flex-col items-center justify-center relative ${catConfig.bg} overflow-hidden`}>
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+            <catConfig.icon size={300} className="absolute -top-20 -right-20 rotate-12" />
+        </div>
+        <catConfig.icon size={100} className={`${catConfig.color} drop-shadow-sm`} strokeWidth={1.5} />
+        <div className="mt-4 px-4 py-1.5 bg-white/90 backdrop-blur-sm rounded-full text-[10px] font-black shadow-sm uppercase tracking-widest text-primary border border-primary/10">
           {errand.status.replace('_', ' ')}
         </div>
       </div>
 
       {/* CONTENT */}
-      <div className="p-4 space-y-6">
+      <div className="p-6 space-y-6 -mt-6 bg-background rounded-t-[3rem] relative z-10">
         <div>
-          <h2 className="text-2xl font-bold text-foreground leading-tight">{errand.title}</h2>
-          <p className="text-sm text-muted-foreground mt-2">
-            Posted by <span className="font-semibold text-foreground">{errand.customer_name}</span>
+          <h2 className="text-3xl font-black text-foreground leading-tight tracking-tight">{errand.title}</h2>
+          <p className="text-sm text-muted-foreground mt-2 font-medium">
+            Requested by <span className="font-bold text-foreground">{errand.customer_name}</span>
           </p>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-4 space-y-3 shadow-sm">
-          <div className="flex items-start gap-3">
-            <MapPin className="text-primary mt-0.5" size={18} />
+        {/* LOGISTICS CARD */}
+        <div className="bg-card border border-border rounded-[2rem] p-6 space-y-4 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shrink-0">
+                <MapPin size={20} />
+            </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-0.5">Pickup</p>
-              <p className="text-sm font-medium text-foreground">{errand.pickup_location}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black mb-1">Pickup From</p>
+              <p className="text-sm font-bold text-foreground">{errand.pickup_location}</p>
             </div>
           </div>
-          <div className="h-px w-full bg-border"></div>
-          <div className="flex items-start gap-3">
-            <MapPin className="text-amber-500 mt-0.5" size={18} />
+          <div className="h-px w-full bg-border/50 ml-14"></div>
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center shrink-0">
+                <Navigation size={20} />
+            </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold mb-0.5">Drop-off</p>
-              <p className="text-sm font-medium text-foreground">{errand.dropoff_location}</p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black mb-1">Drop-off To</p>
+              <p className="text-sm font-bold text-foreground">{errand.dropoff_location}</p>
             </div>
           </div>
         </div>
 
-        {/* FINANCIALS */}
-        <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+        {/* FINANCIALS CARD */}
+        <div className="bg-card border border-border rounded-[2.5rem] p-6 shadow-sm overflow-hidden relative">
           <div className="flex justify-between items-center mb-2">
-            <p className="text-sm text-foreground">Customer Budget</p>
-            <p className="text-sm font-bold">€{errand.budget}</p>
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Customer Budget</p>
+            <p className="text-sm font-black">€{formatBudget(errand.budget)}</p>
           </div>
           <div className="flex justify-between items-center mb-4 text-muted-foreground">
-            <p className="text-sm">Platform Fee (15%)</p>
-            <p className="text-sm">- €{(errand.budget * 0.15).toFixed(2)}</p>
+            <p className="text-xs font-medium">Platform Fee (15%)</p>
+            <p className="text-xs font-bold">- €{(errand.budget * 0.15).toFixed(2)}</p>
           </div>
-          <div className="h-px w-full bg-border mb-3"></div>
-          <div className="flex justify-between items-center">
-            <p className="text-base font-bold text-foreground">Helper Earnings</p>
-            <p className="text-xl font-black text-primary">€{(errand.budget * 0.85).toFixed(2)}</p>
+          <div className="h-px w-full bg-border mb-4"></div>
+          <div className="flex justify-between items-center bg-primary/5 -mx-6 -mb-6 p-6">
+            <p className="text-sm font-black text-foreground uppercase tracking-widest">Helper Earnings</p>
+            <p className="text-3xl font-black text-primary">€{(errand.budget * 0.85).toFixed(2)}</p>
           </div>
         </div>
 
-        {/* CONTROLS */}
-        <div className="space-y-3 mt-8">
+        {/* DESCRIPTION */}
+        <div className="space-y-2">
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground px-1">Task Info</h3>
+            <div className="bg-secondary/30 p-5 rounded-3xl border border-border">
+                <p className="text-sm text-foreground leading-relaxed font-medium italic">"{errand.description}"</p>
+                <div className="flex gap-4 mt-4 pt-4 border-t border-border/50 text-[10px] font-black uppercase tracking-tighter text-muted-foreground">
+                    <span className="flex items-center gap-1"><Clock size={12}/> {errand.urgency}</span>
+                    <span className="flex items-center gap-1"><Info size={12}/> {errand.category}</span>
+                </div>
+            </div>
+        </div>
+
+        {/* DYNAMIC CONTROL FLOW */}
+        <div className="space-y-3 pt-4">
           {!isMyErrand && (errand.status === 'open' || errand.status === 'posted') && (
-            <button onClick={() => updateStatus('accepted')} className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-lg hover:bg-primary/90 transition flex items-center justify-center gap-2">
-              <CheckCircle size={20} /> Accept Errand
+            <button onClick={() => updateStatus('accepted')} className="w-full bg-primary text-white font-black py-4 rounded-2xl shadow-xl shadow-primary/20 flex items-center justify-center gap-3 active:scale-95 transition">
+              <CheckCircle size={22} /> Accept Errand
             </button>
           )}
 
           {!isMyErrand && isMyJob && errand.status === 'accepted' && (
-            <button onClick={() => updateStatus('in_progress')} className="w-full bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-blue-600 transition flex items-center justify-center gap-2">
-              <Navigation size={20} /> I'm On The Way
+            <button onClick={() => updateStatus('in_progress')} className="w-full bg-blue-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-200 flex items-center justify-center gap-3 active:scale-95 transition">
+              <Navigation size={22} /> I'm On The Way
             </button>
           )}
 
           {!isMyErrand && isMyJob && errand.status === 'in_progress' && (
-            <button onClick={() => updateStatus('delivered')} className="w-full bg-amber-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-amber-600 transition flex items-center justify-center gap-2">
-              <PackageCheck size={20} /> Mark as Delivered
+            <button onClick={() => updateStatus('delivered')} className="w-full bg-amber-500 text-white font-black py-4 rounded-2xl shadow-xl shadow-amber-200 flex items-center justify-center gap-3 active:scale-95 transition">
+              <PackageCheck size={22} /> Mark as Delivered
             </button>
           )}
 
           {!isMyErrand && isMyJob && errand.status === 'delivered' && (
-            <div className="w-full bg-secondary text-muted-foreground font-bold py-4 rounded-xl text-center border border-border">
-              Waiting for Customer to Release Payment...
-            </div>
-          )}
-
-          {isMyErrand && (errand.status === 'open' || errand.status === 'posted') && (
-            <div className="w-full bg-secondary text-muted-foreground font-bold py-4 rounded-xl text-center border border-border flex items-center justify-center gap-2">
-              <Clock size={18} /> Waiting for a Helper...
+            <div className="w-full bg-secondary/50 text-muted-foreground font-black py-5 rounded-2xl text-center border-2 border-dashed border-border text-xs uppercase tracking-widest">
+              Awaiting Payment Release...
             </div>
           )}
 
           {isMyErrand && errand.status === 'delivered' && (
-            <button onClick={() => updateStatus('completed')} className="w-full bg-emerald-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-emerald-700 transition flex items-center justify-center gap-2 animate-bounce">
-              <CheckCircle size={20} /> Confirm & Release Payment
+            <button onClick={() => updateStatus('completed')} className="w-full bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-xl shadow-emerald-200 flex items-center justify-center gap-3 animate-pulse active:scale-95 transition">
+              <CheckCircle size={22} /> Confirm & Release Payment
             </button>
           )}
 
           {errand.status === 'completed' && (
-            <div className="w-full bg-emerald-100 text-emerald-700 font-bold py-4 rounded-xl text-center border border-emerald-200 flex items-center justify-center gap-2">
-              <CheckCircle size={20} /> Errand Completed
+            <div className="w-full bg-emerald-100 text-emerald-700 font-black py-5 rounded-2xl text-center border border-emerald-200 flex items-center justify-center gap-2 uppercase text-xs tracking-widest">
+              <ShieldCheck size={20} /> Transaction Finalized
             </div>
           )}
 
           {(isMyErrand || isMyJob) && (errand.status !== 'open' && errand.status !== 'posted') && (
             <button 
               onClick={() => navigate(`/chat/${errand.id}`)}
-              className="w-full bg-card border border-border text-foreground font-bold py-4 rounded-xl shadow-sm hover:bg-secondary transition flex items-center justify-center gap-2"
+              className="w-full bg-white border border-border text-foreground font-black py-4 rounded-2xl shadow-sm flex items-center justify-center gap-3 hover:bg-secondary transition"
             >
-              <MessageSquare size={20} /> Open Chat
+              <MessageSquare size={20} /> Open Conversation
             </button>
           )}
-          {showReview && (
-    <ReviewModal 
-        errandId={errand.id} 
-        reviewedUserId={isMyErrand ? errand.helper_id : errand.customer_id}
-        onClose={() => setShowReview(false)} 
-    />
-)}
         </div>
       </div>
+
+      {/* REVIEW MODAL */}
+      {showReview && (
+        <ReviewModal 
+          errandId={errand.id} 
+          reviewedUserId={isMyErrand ? errand.helper_id : errand.customer_id}
+          onClose={() => setShowReview(false)} 
+        />
+      )}
     </div>
-    
   );
 };
 
-export default ErrandDetail;
+export default ErrandDetails;

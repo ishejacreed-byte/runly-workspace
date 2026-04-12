@@ -22,9 +22,11 @@ const reportRoutes = require('./routes/reports');
 // ==========================================
 // ⚙️ MIDDLEWARE & SOCKET CONFIG
 // ==========================================
-const io = new Server(server, {
-  cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] }
-});
+const io = new Server(server, { 
+ cors: {  
+   origin: ["http://localhost:5173", "http://localhost:5174"], 
+   methods: ["GET", "POST"] 
+ }});
 
 app.use(cors());
 app.use(express.json());

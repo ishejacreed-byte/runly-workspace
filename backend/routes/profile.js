@@ -17,7 +17,22 @@ router.get('/:id', auth, async (req, res) => {
             COALESCE((SELECT SUM(budget * 0.85) FROM errands WHERE helper_id = u.id AND status = 'completed'), 0) as total_earned
             FROM users u WHERE u.id = $1
         `, [userId]);
-
+const getNextPayoutDate = () => {
+  const today = new Date();
+  const dayOfWeek = today.getDay(); // 0 is Sunday, 1 is Monday...
+  const daysUntilMonday = (1 - dayOfWeek + 7) % 7;
+  
+  // If today is Monday, we show next Monday (add 7 days) 
+  // or keep it 0 if you pay out same-day. Let's assume next Monday:
+  const targetDate = new Date(today);
+  targetDate.setDate(today.getDate() + (daysUntilMonday === 0 ? 7 : daysUntilMonday));
+  
+  return targetDate.toLocaleDateString('en-US', { 
+    weekday: 'long', 
+    month: 'short', 
+    day: 'numeric' 
+  });
+};
         const reviews = await pool.query(`
             SELECT r.*, u.name as reviewer_name, u.profile_picture as reviewer_pic 
             FROM reviews r JOIN users u ON r.reviewer_id = u.id 
