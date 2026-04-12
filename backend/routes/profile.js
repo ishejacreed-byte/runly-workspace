@@ -68,4 +68,27 @@ router.put('/picture', auth, async (req, res) => {
     } catch (err) { res.status(500).send('Server Error'); }
 });
 
+router.post('/review/:id', auth, async (req, res) => {
+  try {
+    const reviewerId = req.user.id;
+    const reviewedUserId = req.params.id;
+    const { rating, comment } = req.body;
+
+    await pool.query(
+      `INSERT INTO reviews (reviewer_id, reviewed_user_id, rating, comment, created_at)
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [reviewerId, reviewedUserId, rating, comment]
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+
+
+
+
 module.exports = router;
