@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import VerificationFlow from '../components/VerificationFlow';
 import { formatBudget } from '../Utils/formatters';
+import ReviewCard from "../components/ReviewCard";
 
 const Profile = () => {
   const { user, logout, roleMode } = useContext(AuthContext); 
@@ -18,6 +19,8 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [ratingValue, setRatingValue] = useState(5);
   const [comment, setComment] = useState("");
+  const [latestReviews, setLatestReviews] = useState([]);
+
 
 
   // 🛠️ DYNAMIC DATE LOGIC: Finds the upcoming Monday
@@ -47,6 +50,15 @@ const Profile = () => {
   };
 
   useEffect(() => { fetchProfile(); }, []);
+  
+ useEffect(() => {
+  if (!profile) return;   // <-- prevents crash
+
+  fetch(`http://localhost:5000/api/reviews/latest/${profile.id}`)
+    .then(res => res.json())
+    .then(data => setLatestReviews(data));
+}, [profile]);
+
 
   const handleUpload = () => {
     window.cloudinary.openUploadWidget({ 
@@ -119,7 +131,7 @@ const Profile = () => {
 </div>
 
 <p className="text-xs text-muted-foreground font-bold mt-1">
-  {completedCount} - Jobs Completed
+  {completedCount} Jobs Completed
 </p>
 
 
@@ -241,27 +253,16 @@ const Profile = () => {
     <p classname="text-sm text-muted-foreground text-center">No reviews yet.</p>
   )}
 
-  {profile.reviews.map((r, i) => (
-    <div key={i} className="bg-card border border-border p-4 rounded-2xl shadow-sm">
-      <div className="flex items-center gap-3 mb-2">
-        <img 
-          src={r.reviewer_pic} 
-          className="w-10 h-10 rounded-full object-cover" 
-        />
-        <div>
-          <p className="font-bold text-sm">{r.reviewer_name}</p>
-          <p className="text-xs text-yellow-500 flex items-center gap-1">
-            <Star size={12} fill="currentColor" strokeWidth={0} />
-            {r.rating}
-          </p>
-        </div>
-      </div>
-      <p className="text-sm text-foreground">{r.comment}</p>
-      <p className="text-[10px] text-muted-foreground mt-2">
-        {new Date(r.created_at).toLocaleDateString()}
-      </p>
-    </div>
-  ))}
+ {latestReviews.map(review => (
+  <ReviewCard key={review.id} review={review} />
+))}
+
+<button
+  onClick={() => navigate(`/reviews/${profile.id}`)}
+  className="text-blue-600 underline mt-2"
+>
+  See all reviews
+</button>
 </div>
 
 {/* ⭐ LEAVE A REVIEW */}
