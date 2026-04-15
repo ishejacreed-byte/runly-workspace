@@ -2,39 +2,45 @@ import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { 
-  ShieldCheck, ShieldAlert, User, Check, X, 
-  MessageSquare, Mail, Trash2, Eye, Loader2, AlertOctagon 
+  ShieldCheck, ShieldAlert, User, LogOut, LayoutDashboard, Loader2, AlertOctagon 
 } from 'lucide-react';
 
+// 🟢 IMPORT ALL 3 MODULES
+import VerificationQueue from './admin/VerificationQueue';
+import ReportsDesk from './admin/ReportsDesk';
+import UserDirectory from './admin/UserDirectory'; 
+
 const Admin = () => {
-  const { user } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const [activeTab, setActiveTab] = useState('verifications');
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🛠️ DUAL-HEADER FIX: Guaranteed Token acceptance for Admin routes
   const getTokenConfig = () => {
     const token = localStorage.getItem('runly_token');
-    return { 
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'x-auth-token': token
-      } 
-    };
+    return { headers: { 'Authorization': `Bearer ${token}`, 'x-auth-token': token } };
   };
 
   const fetchAdminData = async (tab) => {
     setLoading(true);
     try {
-      // Maps the tab name to your backend endpoints
-      const endpoint = tab === 'verifications' ? '/api/admin/verifications' : '/api/reports/admin/all';
-      const res = await axios.get(`http://localhost:5000${endpoint}`, getTokenConfig());
-      setData(res.data);
+      let endpoint = '';
+      if (tab === 'verifications') endpoint = '/api/admin/verifications';
+      else if (tab === 'reports') endpoint = '/api/reports/admin/all';
+      
+      // 🟢 Skip fetching here for 'users', because UserDirectory.jsx fetches its own data!
+      if (tab === 'users') {
+        setLoading(false);
+        return;
+      }
+
+      if (endpoint) {
+        const res = await axios.get(`http://localhost:5000${endpoint}`, getTokenConfig());
+        setData(res.data);
+      }
     } catch (err) {
-      console.error("Failed to fetch admin data", err);
-      // If 403, it means the user needs to log out and back in to refresh their Admin status
       if (err.response?.status === 403) {
-        alert("Access Denied: Please log out and log back in to refresh your Admin session.");
+        console.error("403 Forbidden: Your database role is not SUPER_ADMIN.");
       }
     } finally {
       setLoading(false);
@@ -42,169 +48,107 @@ const Admin = () => {
   };
 
   useEffect(() => {
-    if (user?.is_admin) {
-      fetchAdminData(activeTab);
-    }
+    if (user?.is_admin) fetchAdminData(activeTab);
   }, [activeTab, user]);
 
-  const handleAction = async (id, action, type) => {
-    if (!window.confirm(`Are you sure you want to ${action} this?`)) return;
-    
-    try {
-      if (type === 'verify') {
-        await axios.put(`http://localhost:5000/api/admin/verify/${id}`, { status: action }, getTokenConfig());
-      }
-      fetchAdminData(activeTab); // Refresh the list after action
-    } catch (err) {
-      alert("Action failed. Check console for details.");
-    }
-  };
-
+  // 🛡️ FRONTEND BOUNCER: If the user context says they aren't an admin, block them entirely.
   if (!user?.is_admin) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
-        <AlertOctagon size={48} className="text-destructive mb-4" />
-        <h1 className="text-2xl font-bold">Unauthorized Access</h1>
-        <p className="text-muted-foreground mt-2">You do not have permission to view the Command Center.</p>
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in duration-300">
+        <AlertOctagon size={64} className="text-destructive mb-4" />
+        <h1 className="text-3xl font-black uppercase tracking-tight">Security Lockout</h1>
+        <p className="text-muted-foreground font-medium mt-2">You do not have Operations clearance.</p>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background pb-24 pt-6 px-4">
-      {/* Header */}
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-destructive/10 text-destructive rounded-2xl">
-          <ShieldCheck size={32} />
-        </div>
-        <div>
-          <h1 className="text-3xl font-black text-foreground uppercase tracking-tight">Command Center</h1>
-          <p className="text-sm text-muted-foreground">System Administration & Safety</p>
-        </div>
-      </div>
+  const TABS = [
+    { id: 'verifications', label: 'Verifications', icon: ShieldCheck },
+    { id: 'reports', label: 'Safety Reports', icon: ShieldAlert },
+    { id: 'users', label: 'User Directory', icon: User },
+  ];
 
-      {/* Tabs Navigation */}
-      <div className="flex gap-2 mb-6 bg-card p-1 rounded-2xl border border-border shadow-sm">
-        {['verifications', 'reports', 'users'].map((tab) => (
+  return (
+    <div className="min-h-screen bg-background flex flex-col md:flex-row animate-fadeSlideIn">
+      
+      {/* DESKTOP SIDEBAR */}
+      <aside className="w-full md:w-72 bg-card border-r border-border p-6 hidden md:flex flex-col min-h-screen sticky top-0">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="p-3 bg-foreground text-background rounded-2xl shadow-lg">
+            <LayoutDashboard size={24} strokeWidth={2.5} />
+          </div>
+          <div>
+            <h1 className="text-xl font-black uppercase tracking-widest">Runly Ops</h1>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Command Center</p>
+          </div>
+        </div>
+
+        <nav className="space-y-2 flex-1">
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                activeTab === tab.id 
+                  ? 'bg-foreground text-background shadow-md' 
+                  : 'text-muted-foreground hover:bg-secondary'
+              }`}
+            >
+              <tab.icon size={18} strokeWidth={2.5} /> {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        <button onClick={logout} className="mt-auto w-full flex items-center gap-3 px-4 py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-rose-600 hover:bg-rose-50 transition active:scale-95">
+          <LogOut size={18} strokeWidth={2.5} /> Exit System
+        </button>
+      </aside>
+
+      {/* MOBILE TOP NAVIGATION */}
+      <div className="md:hidden bg-card border-b border-border p-4 flex gap-2 overflow-x-auto pb-4 pt-6">
+        {TABS.map(tab => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-              activeTab === tab 
-                ? 'bg-foreground text-background shadow-lg scale-[1.02]' 
-                : 'text-muted-foreground hover:bg-secondary'
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-shrink-0 px-5 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${
+              activeTab === tab.id ? 'bg-foreground text-background' : 'bg-secondary text-muted-foreground'
             }`}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-          <Loader2 className="animate-spin mb-2" size={32} />
-          <p className="text-xs font-bold uppercase tracking-widest">Scanning Database...</p>
-        </div>
-      ) : (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          
-          {/* VERIFICATIONS TAB */}
-          {activeTab === 'verifications' && (
-            data.length === 0 ? (
-              <div className="text-center py-10 bg-card rounded-3xl border border-dashed border-border">
-                <p className="text-sm text-muted-foreground">No pending verification requests.</p>
-              </div>
-            ) : (
-              data.map(item => (
-                <div key={item.id} className="bg-card border border-border rounded-3xl p-5 shadow-sm space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-bold text-foreground">{item.name}</h4>
-                      <p className="text-xs text-muted-foreground">{item.email}</p>
-                    </div>
-                    <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Pending Review</span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground ml-1">ID Document</p>
-                      <img 
-                        src={item.id_url} 
-                        className="rounded-xl h-32 w-full object-cover border border-border cursor-pointer hover:opacity-90 transition" 
-                        onClick={() => window.open(item.id_url)} 
-                        alt="ID"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold uppercase text-muted-foreground ml-1">Selfie</p>
-                      <img 
-                        src={item.selfie_url} 
-                        className="rounded-xl h-32 w-full object-cover border border-border cursor-pointer hover:opacity-90 transition" 
-                        onClick={() => window.open(item.selfie_url)} 
-                        alt="Selfie"
-                      />
-                    </div>
-                  </div>
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 p-6 lg:p-10 max-w-5xl mx-auto w-full">
+        <header className="mb-8 hidden md:block">
+          <h2 className="text-3xl font-black uppercase tracking-tight text-foreground">
+            {TABS.find(t => t.id === activeTab)?.label}
+          </h2>
+        </header>
 
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => handleAction(item.id, 'verified', 'verify')} 
-                      className="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-700 transition active:scale-95"
-                    >
-                      <Check size={18} /> Approve
-                    </button>
-                    <button 
-                      onClick={() => handleAction(item.id, 'rejected', 'verify')} 
-                      className="flex-1 bg-destructive/10 text-destructive font-bold py-3 rounded-xl flex items-center justify-center gap-2 hover:bg-destructive/20 transition active:scale-95"
-                    >
-                      <X size={18} /> Reject
-                    </button>
-                  </div>
-                </div>
-              ))
-            )
-          )}
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
+            <Loader2 className="animate-spin mb-4 text-primary" size={40} />
+            <p className="text-[10px] font-black uppercase tracking-widest">Syncing Database...</p>
+          </div>
+        ) : (
+          <div className="w-full">
+            {activeTab === 'verifications' && (
+              <VerificationQueue data={data} refreshData={fetchAdminData} getTokenConfig={getTokenConfig} />
+            )}
+            
+            {activeTab === 'reports' && (
+              <ReportsDesk data={data} />
+            )}
 
-          {/* REPORTS TAB */}
-          {activeTab === 'reports' && (
-             data.length === 0 ? (
-              <div className="text-center py-10 bg-card rounded-3xl border border-dashed border-border">
-                <p className="text-sm text-muted-foreground">Zero reports found. The community is safe!</p>
-              </div>
-             ) : (
-               data.map(report => (
-                 <div key={report.id} className="bg-card border border-border rounded-3xl p-5 shadow-sm space-y-3">
-                   <div className="flex items-center gap-2 text-destructive font-black text-xs uppercase tracking-widest">
-                     <ShieldAlert size={14} /> {report.category}
-                   </div>
-                   <p className="text-sm text-foreground italic bg-secondary/30 p-3 rounded-xl border border-border">
-                     "{report.description}"
-                   </p>
-                   <div className="flex justify-between items-center pt-2">
-                     <div className="text-[10px] text-muted-foreground">
-                       Reporter: <span className="font-bold text-foreground">{report.reporter_name}</span><br/>
-                       Target: <span className="font-bold text-destructive">{report.reported_user_name}</span>
-                     </div>
-                     <div className="flex gap-2">
-                       <button className="p-2 bg-secondary rounded-full hover:text-primary transition" title="Message User"><Mail size={16}/></button>
-                       <button className="p-2 bg-secondary rounded-full hover:text-destructive transition" title="Dismiss Report"><Trash2 size={16}/></button>
-                     </div>
-                   </div>
-                 </div>
-               ))
-             )
-          )}
-
-          {/* USERS TAB - Placeholder for User Management */}
-          {activeTab === 'users' && (
-            <div className="text-center py-10 text-muted-foreground">
-              <User size={40} className="mx-auto mb-2 opacity-20" />
-              <p className="text-sm">User search and management coming in next patch.</p>
-            </div>
-          )}
-
-        </div>
-      )}
+            {/* 🟢 THE REAL USER DIRECTORY IS NOW RENDERED HERE */}
+            {activeTab === 'users' && (
+              <UserDirectory getTokenConfig={getTokenConfig} />
+            )}
+          </div>
+        )}
+      </main>
     </div>
   );
 };

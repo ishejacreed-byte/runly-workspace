@@ -42,6 +42,8 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/trust', trustRoutes);
 app.use('/api/reports', reportRoutes);
+// Add this near your other routes in server.js
+app.use('/api/admin', require('./routes/admin'));
 
 // ==========================================
 // 🔔 GLOBAL NOTIFICATIONS & CHAT ROUTES

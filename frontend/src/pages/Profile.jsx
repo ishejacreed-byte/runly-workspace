@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import VerificationFlow from '../components/VerificationFlow';
 import { formatBudget } from '../Utils/formatters';
+import ReviewCard from "../components/Reviewcard";
 
 const Profile = () => {
   const { user, logout, roleMode } = useContext(AuthContext); 
@@ -16,6 +17,11 @@ const Profile = () => {
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({ bio: '', location: '' });
   const [isSaving, setIsSaving] = useState(false);
+  const [ratingValue, setRatingValue] = useState(5);
+  const [comment, setComment] = useState("");
+  const [latestReviews, setLatestReviews] = useState([]);
+
+
 
   // 🛠️ DYNAMIC DATE LOGIC: Finds the upcoming Monday
   const getNextPayoutDate = () => {
@@ -26,6 +32,14 @@ const Profile = () => {
     targetDate.setDate(today.getDate() + (daysUntilMonday === 0 ? 7 : daysUntilMonday));
     return targetDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
   };
+  const submitReview = async () => {
+  await axios.post(
+    `http://localhost:5000/api/profile/review/${user.id}`,
+    { rating: ratingValue, comment }
+  );
+  fetchProfile();
+};
+
 
   const fetchProfile = async () => {
     try {
@@ -36,6 +50,15 @@ const Profile = () => {
   };
 
   useEffect(() => { fetchProfile(); }, []);
+  
+ useEffect(() => {
+  if (!profile) return;   // <-- prevents crash
+
+  fetch(`http://localhost:5000/api/reviews/latest/${profile.id}`)
+    .then(res => res.json())
+    .then(data => setLatestReviews(data));
+}, [profile]);
+
 
   const handleUpload = () => {
     window.cloudinary.openUploadWidget({ 
@@ -96,6 +119,22 @@ const Profile = () => {
         <h2 className="text-2xl font-black text-foreground">{profile.name}</h2>
         <p className="text-sm text-muted-foreground font-medium">{profile.email}</p>
         
+        {/* ⭐ RATING SYSTEM */}
+<div className="flex items-center justify-center gap-2 mt-2">
+  <div className="flex items-center gap-1 text-yellow-500">
+    <Star size={16} fill="currentColor" strokeWidth={0} />
+    <span className="font-bold text-sm">{Number(profile.avg_rating).toFixed(1)}</span>
+  </div>
+  <span className="text-xs text-muted-foreground font-medium">
+    ({profile.review_count})
+  </span>
+</div>
+
+<p className="text-xs text-muted-foreground font-bold mt-1">
+  {completedCount} Jobs Completed
+</p>
+
+
         <div className="flex flex-wrap justify-center gap-2 mt-3">
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${profile.v_status === 'verified' ? 'bg-emerald-100 text-emerald-700' : 'bg-muted text-muted-foreground'}`}>
             <ShieldCheck size={12} strokeWidth={3} />
@@ -201,6 +240,62 @@ const Profile = () => {
           <p className="text-xs text-muted-foreground">Add one to post errands or receive payments</p>
         </div>
       </div>
+
+
+      {/* ⭐ USER REVIEWS SECTION */}
+<div className="space-y-4 mt-6">
+  <div className="flex items-center gap-2 px-1">
+    <UserRound size={14} className="text-muted-foreground" />
+    <h3 className="text-xs font-black uppercase tracking-widest text-muted-foreground">Reviews</h3>
+  </div>
+
+  {profile.reviews.length === 0 && (
+    <p classname="text-sm text-muted-foreground text-center">No reviews yet.</p>
+  )}
+
+ {latestReviews.map(review => (
+  <ReviewCard key={review.id} review={review} />
+))}
+
+<button
+  onClick={() => navigate(`/reviews/${profile.id}`)}
+  className="text-blue-600 underline mt-2"
+>
+  See all reviews
+</button>
+</div>
+
+{/* ⭐ LEAVE A REVIEW */}
+<div className="bg-card border border-border p-5 rounded-2xl shadow-sm mt-4">
+  <h3 className="text-sm font-bold mb-3">Leave a Review</h3>
+
+  <select 
+    className="w-full p-3 bg-background border border-border rounded-xl mb-3"
+    value={ratingValue}
+    onChange={(e) => setRatingValue(e.target.value)}
+  >
+    <option value="5">5 Stars</option>
+    <option value="4">4 Stars</option>
+    <option value="3">3 Stars</option>
+    <option value="2">2 Stars</option>
+    <option value="1">1 Star</option>
+  </select>
+
+  <textarea
+    rows="3"
+    className="w-full p-3 bg-background border border-border rounded-xl mb-3"
+    placeholder="Write a review..."
+    value={comment}
+    onChange={(e) => setComment(e.target.value)}
+  />
+
+  <button 
+    onClick={submitReview}
+    className="w-full bg-primary text-white font-black py-3 rounded-xl"
+  >
+    Submit Review
+  </button>
+</div>
 
       {/* ACCOUNT ACTIONS */}
       <div className="grid grid-cols-1 gap-3 pt-4">
