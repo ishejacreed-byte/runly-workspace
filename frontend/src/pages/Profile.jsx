@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 import VerificationFlow from '../components/VerificationFlow';
 import { formatBudget } from '../Utils/formatters';
-import ReviewCard from "../components/Reviewcard";
 
 const Profile = () => {
   const { user, logout, roleMode } = useContext(AuthContext); 
