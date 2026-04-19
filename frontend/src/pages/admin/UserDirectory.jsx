@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // 🟢 Added useNavigate
 import { User, Ban, ShieldCheck, Mail, Search, ShieldAlert, Loader2 } from 'lucide-react';
 
 const UserDirectory = ({ getTokenConfig }) => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate(); // 🟢 Initialized navigate
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -64,12 +66,24 @@ const UserDirectory = ({ getTokenConfig }) => {
           <div key={u.id} className="bg-card border border-border rounded-[2rem] p-5 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 hover:shadow-md transition">
             
             <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${u.is_banned ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}>
+              {/* 🟢 CLICKABLE AVATAR */}
+              <div 
+                onClick={() => navigate(`/profile/${u.id}`)}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 shadow-inner cursor-pointer hover:scale-105 transition-transform ${u.is_banned ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary'}`}
+                title={`View ${u.name || 'User'}'s Profile`}
+              >
                 {u.is_banned ? <ShieldAlert size={24}/> : <User size={24}/>}
               </div>
+              
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="font-black text-foreground">{u.name || 'Unknown User'}</h4>
+                  {/* 🟢 CLICKABLE NAME */}
+                  <h4 
+                    onClick={() => navigate(`/profile/${u.id}`)}
+                    className="font-black text-foreground cursor-pointer hover:underline hover:text-primary transition-colors"
+                  >
+                    {u.name || 'Unknown User'}
+                  </h4>
                   {u.v_status === 'verified' && <ShieldCheck size={14} className="text-emerald-500" title="Verified ID" />}
                   {u.system_role && <span className="bg-foreground text-background text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest">{u.system_role}</span>}
                 </div>

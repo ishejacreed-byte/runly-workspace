@@ -13,7 +13,7 @@ import Profile from './pages/Profile';
 import Chat from './pages/Chat';
 import ErrandDetail from './pages/ErrandDetail';
 import Admin from './pages/Admin';
-
+import AllReviews from './pages/AllReviews'; // (Adjust the path if it's in components instead of pages)
 // 🛠️ The Wrapper knows exactly when to hide the Bottom Nav
 const ProtectedRoute = ({ children }) => {
   const { user } = useContext(AuthContext);
@@ -48,15 +48,22 @@ const AppRoutes = () => {
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
       <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
+      
+      {/* 🟢 YOUR OWN PROFILE */}
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      
+      {/* 🟢 SOMEONE ELSE'S PROFILE (Now properly protected!) */}
+      <Route path="/profile/:id" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/reviews/:id" element={<ProtectedRoute><AllReviews /></ProtectedRoute>} />
+      
       <Route 
-  path="/admin" 
-  element={
-    <ProtectedRoute>
-       <Admin />
-    </ProtectedRoute>
-  } 
-/>
+        path="/admin" 
+        element={
+          <ProtectedRoute>
+             <Admin />
+          </ProtectedRoute>
+        } 
+      />
     </Routes>
   );
 };

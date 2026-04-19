@@ -23,7 +23,7 @@ const BottomNav = () => {
   const hasAdminClearance = user?.is_admin || ['SUPER_ADMIN', 'ADMIN', 'MODERATOR'].includes(user?.system_role);
 
   if (hasAdminClearance) {
-    navItems.push({ name: 'Admin', path: '/admin', icon: ShieldAlert }); // Renamed to "Ops" for a cleaner look!
+    navItems.push({ name: 'ADMIN', path: '/admin', icon: ShieldAlert }); // Renamed to "Ops" for a cleaner look!
   }
 
   // Safety catch: Don't render if user data hasn't loaded yet
@@ -47,7 +47,7 @@ const BottomNav = () => {
                 strokeWidth={isActive ? 2.5 : 2}
                 className={`transition-colors duration-200 ${
                   isActive 
-                    ? (item.name === 'Ops' ? 'text-rose-600' : 'text-primary') 
+                    ? (item.name === 'ADMIN' ? 'text-rose-600' : 'text-primary') 
                     : 'text-muted-foreground group-hover:text-foreground'
                 }`} 
               />

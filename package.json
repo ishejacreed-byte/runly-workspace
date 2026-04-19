@@ -1,0 +1,27 @@
+{
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.2",
+    "autoprefixer": "^10.5.0",
+    "postcss": "^8.5.10",
+    "tailwindcss": "^4.2.2"
+  },
+  "name": "runly-workspace",
+  "version": "1.0.0",
+  "description": "Local Errand &amp; Pickup Platform",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ishejacreed-byte/runly-workspace.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ishejacreed-byte/runly-workspace/issues"
+  },
+  "homepage": "https://github.com/ishejacreed-byte/runly-workspace#readme"
+}

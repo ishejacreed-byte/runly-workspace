@@ -86,13 +86,29 @@ const Messages = () => {
                 className={`bg-card border rounded-2xl p-4 flex items-center justify-between cursor-pointer transition ${unread > 0 ? 'border-primary/30 bg-primary/5 shadow-sm' : 'border-border shadow-sm hover:border-primary/50'}`}
               >
                 <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="w-12 h-12 bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-700 font-bold flex items-center justify-center rounded-full shadow-inner flex-shrink-0 relative">
+                  
+                  {/* 🟢 CLICKABLE AVATAR: stopPropagation prevents opening chat */}
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation(); 
+                      navigate(`/profile/${chat.partner_id}`);
+                    }}
+                    className="w-12 h-12 bg-gradient-to-br from-emerald-100 to-emerald-200 text-emerald-700 font-bold flex items-center justify-center rounded-full shadow-inner flex-shrink-0 relative cursor-pointer hover:scale-105 transition-transform hover:shadow-md z-10"
+                    title={`View ${partnerName}'s Profile`}
+                  >
                     {(partnerName).charAt(0).toUpperCase()}
                     {unread > 0 && <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>}
                   </div>
                   
                   <div className="min-w-0 pr-4">
-                    <h4 className={`text-sm truncate ${unread > 0 ? 'font-bold text-foreground' : 'font-semibold text-foreground'}`}>
+                    {/* 🟢 CLICKABLE NAME */}
+                    <h4 
+                      onClick={(e) => {
+                        e.stopPropagation(); 
+                        navigate(`/profile/${chat.partner_id}`);
+                      }}
+                      className={`text-sm truncate cursor-pointer hover:underline hover:text-primary transition-colors ${unread > 0 ? 'font-bold text-foreground' : 'font-semibold text-foreground'}`}
+                    >
                       {partnerName}
                     </h4>
                     <p className="text-xs text-muted-foreground truncate mb-0.5">Re: {chat.task}</p>

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // 🟢 Added routing
 import { ShieldCheck, X, Loader2, ZoomIn } from 'lucide-react';
 
 const VerificationQueue = ({ data, refreshData, getTokenConfig }) => {
   const [processingId, setProcessingId] = useState(null);
+  const navigate = useNavigate(); // 🟢 Initialized navigate
 
   const handleAction = async (id, action) => {
     if (!window.confirm(`Are you sure you want to mark this as ${action}?`)) return;
@@ -38,7 +40,14 @@ const VerificationQueue = ({ data, refreshData, getTokenConfig }) => {
           <div className="flex-1">
             <div className="flex justify-between items-start mb-4">
               <div>
-                <h4 className="text-xl font-black text-foreground">{item.name}</h4>
+                {/* 🟢 CLICKABLE USER NAME */}
+                <h4 
+                  onClick={() => navigate(`/profile/${item.user_id || item.id}`)}
+                  className="text-xl font-black text-foreground cursor-pointer hover:underline hover:text-primary transition-colors"
+                  title="View User Profile"
+                >
+                  {item.name}
+                </h4>
                 <p className="text-sm font-medium text-muted-foreground">{item.email}</p>
               </div>
               <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Pending Review</span>

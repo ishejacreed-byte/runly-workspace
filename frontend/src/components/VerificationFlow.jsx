@@ -6,10 +6,10 @@ const VerificationFlow = ({ onClose, onRefresh }) => {
   const [step, setStep] = useState(1);
   const [urls, setUrls] = useState({ idUrl: '', selfieUrl: '' });
 
-  const handleUpload = (field) => {
+const handleUpload = (field) => {
     window.cloudinary.openUploadWidget({ 
         cloudName: 'dybe866xr', 
-        uploadPreset: 'runly_secure_ids', // Use a private preset for IDs
+        uploadPreset: 'runly_ids', // 🟢 CHANGE THIS TO MATCH YOUR SCREENSHOT EXACTLY
         clientAllowedFormats: ["jpg", "png", "pdf"]
     }, async (error, result) => {
       if (!error && result.event === "success") {
@@ -20,9 +20,21 @@ const VerificationFlow = ({ onClose, onRefresh }) => {
   };
 
   const handleSubmit = async () => {
-    await axios.post('http://localhost:5000/api/trust/verify', urls);
-    onRefresh();
-    onClose();
+    try {
+      // 🟢 GET THE TOKEN
+      const token = localStorage.getItem('runly_token');
+      
+      // 🟢 ATTACH THE TOKEN TO THE REQUEST
+      await axios.post('http://localhost:5000/api/trust/verify', urls, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      onRefresh();
+      onClose();
+    } catch (err) {
+      console.error("Submission failed:", err);
+      alert("Failed to submit verification. Please try again.");
+    }
   };
 
   return (

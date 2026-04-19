@@ -10,8 +10,6 @@ import {
   Loader2, Wallet, Info, ShieldCheck 
 } from 'lucide-react';
 
-// ... rest of your code starts here (const CATEGORIES = ...)
-
 // 🛠️ SMART ICON ENGINE
 const CATEGORIES = [
   { name: 'Grocery', icon: ShoppingCart, color: 'text-emerald-600', bg: 'bg-emerald-100' },
@@ -93,9 +91,30 @@ const ErrandDetails = () => {
       <div className="p-6 space-y-6 -mt-6 bg-background rounded-t-[3rem] relative z-10">
         <div>
           <h2 className="text-3xl font-black text-foreground leading-tight tracking-tight">{errand.title}</h2>
+          
+          {/* 🟢 CLICKABLE CUSTOMER NAME */}
           <p className="text-sm text-muted-foreground mt-2 font-medium">
-            Requested by <span className="font-bold text-foreground">{errand.customer_name}</span>
+            Requested by{' '}
+            <span 
+              onClick={(e) => { e.stopPropagation(); navigate(`/profile/${errand.customer_id}`); }}
+              className="font-bold text-primary hover:underline cursor-pointer"
+            >
+              {errand.customer_name}
+            </span>
           </p>
+
+          {/* 🟢 NEW: CLICKABLE HELPER NAME (If assigned) */}
+          {errand.helper_id && (
+            <p className="text-sm text-muted-foreground mt-1 font-medium">
+              Assigned to{' '}
+              <span 
+                onClick={(e) => { e.stopPropagation(); navigate(`/profile/${errand.helper_id}`); }}
+                className="font-bold text-primary hover:underline cursor-pointer"
+              >
+                {errand.helper_name || "A Helper"}
+              </span>
+            </p>
+          )}
         </div>
 
         {/* LOGISTICS CARD */}
