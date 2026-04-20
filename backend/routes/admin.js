@@ -33,25 +33,30 @@ router.put('/verify/:id', [auth, authorizeRole('SUPER_ADMIN', 'ADMIN', 'MODERATO
     const verificationId = req.params.id;
 
     try {
-        // 1. Update the verification request status
         const verifyUpdate = await pool.query(
             'UPDATE verifications SET status = $1, reviewed_by = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING user_id',
             [status, req.user.id, verificationId]
         );
 
-        if (verifyUpdate.rows.length === 0) {
-            return res.status(404).json({ msg: "Verification request not found" });
-        }
-
+        if (verifyUpdate.rows.length === 0) return res.status(404).json({ msg: "Verification request not found" });
         const userId = verifyUpdate.rows[0].user_id;
 
-        // 2. If approved, update the actual user's profile to reflect verified status
+        // Update the actual user's profile
         if (status === 'verified') {
-            await pool.query(
-                'UPDATE users SET v_status = $1 WHERE id = $2',
-                ['verified', userId]
-            );
+            await pool.query('UPDATE users SET v_status = $1 WHERE id = $2', ['verified', userId]);
+        } else if (status === 'rejected') {
+            await pool.query('UPDATE users SET v_status = $1 WHERE id = $2', ['unverified', userId]); // Reset so they can try again
         }
+
+        // 🔔 ALERT: Tell the user their outcome!
+        const alertMessage = status === 'verified' 
+            ? "Congratulations! Your identity verification has been approved. You now have the Verified badge."
+            : "Your identity verification was rejected. Please check your submitted documents and try again.";
+        
+        await pool.query(
+            `INSERT INTO alerts (user_id, type, message, link_url) VALUES ($1, $2, $3, $4)`,
+            [userId, 'verification', alertMessage, '/profile']
+        );
 
         res.json({ msg: `User successfully ${status}` });
     } catch (err) {

@@ -9,7 +9,6 @@ const auth = require('../middleware/auth');
 router.post('/verify', auth, async (req, res) => {
     const { idUrl, selfieUrl } = req.body;
     try {
-        // 1. Insert the new verification request
         const newVerification = await pool.query(
             `INSERT INTO verifications (user_id, id_url, selfie_url, status, created_at) 
              VALUES ($1, $2, $3, 'pending', CURRENT_TIMESTAMP)
@@ -17,11 +16,17 @@ router.post('/verify', auth, async (req, res) => {
             [req.user.id, idUrl, selfieUrl]
         );
 
-        // 2. Update the user's profile badge to "Pending"
-        await pool.query(
-            `UPDATE users SET v_status = 'pending' WHERE id = $1`,
-            [req.user.id]
-        );
+        await pool.query(`UPDATE users SET v_status = 'pending' WHERE id = $1`, [req.user.id]);
+
+        // 🔔 ALERT: Notify all Admins that a new ID is in the queue!
+        const admins = await pool.query(`SELECT id FROM users WHERE system_role IN ('SUPER_ADMIN', 'ADMIN', 'MODERATOR')`);
+        
+        for (let admin of admins.rows) {
+            await pool.query(
+                `INSERT INTO alerts (user_id, type, message, link_url) VALUES ($1, $2, $3, $4)`,
+                [admin.id, 'verification_pending', `A new identity verification request has been submitted.`, '/admin']
+            );
+        }
 
         res.json(newVerification.rows[0]);
     } catch (err) { 

@@ -91,6 +91,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Merge updated fields into user state and persist to localStorage
+const updateUser = (updatedFields) => {
+  setUser(prev => {
+    const merged = { ...prev, ...updatedFields };
+    try {
+      localStorage.setItem('runly_user', JSON.stringify(merged));
+    } catch (e) {
+      // ignore localStorage errors
+    }
+    return merged;
+  });
+};
+
+
   // 🛠️ LOGOUT
   const logout = () => {
     setUser(null);
@@ -110,7 +124,8 @@ export const AuthProvider = ({ children }) => {
       badges, 
       fetchBadges, 
       roleMode, 
-      toggleRole 
+      toggleRole,
+      updateUser   // <-- ADDED HERE 
     }}>
       {children}
     </AuthContext.Provider>

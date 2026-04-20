@@ -86,7 +86,7 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (err) { res.status(500).send('Server Error'); }
 });
 
-// 🟣 PUT: Update Errand Status (The 500 Fix is here)
+// 🟣 PUT: Update Errand Status (WITH ALERTS TRIGGERS)
 router.put('/:id/status', auth, async (req, res) => {
   try {
     const { status } = req.body;
@@ -104,21 +104,43 @@ router.put('/:id/status', auth, async (req, res) => {
       if (errand.status !== 'open') return res.status(400).json({ msg: 'Errand no longer available' });
       query = 'UPDATE errands SET status = $1, helper_id = $2 WHERE id = $3 RETURNING *';
       values = [status, userId, id];
+
+      // 🔔 ALERT: Tell Customer their errand was accepted
+      await pool.query(
+        `INSERT INTO alerts (user_id, type, message, link_url) VALUES ($1, $2, $3, $4)`,
+        [errand.customer_id, 'errand_accepted', `Good news! Your task "${errand.title}" was just accepted.`, `/errand/${id}`]
+      );
     } 
-    else if (status === 'in_progress' || status === 'delivered') {
+    else if (status === 'in_progress') {
       if (Number(errand.helper_id) !== userId) return res.status(403).json({ msg: 'Unauthorized helper' });
       query = 'UPDATE errands SET status = $1 WHERE id = $2 RETURNING *';
       values = [status, id];
+      // 🔔 ALERT: Tell Customer the helper started
+      await pool.query(
+        `INSERT INTO alerts (user_id, type, message, link_url) VALUES ($1, $2, $3, $4)`,
+        [errand.customer_id, 'errand_progress', `Your helper is now working on "${errand.title}".`, `/errand/${id}`]
+      );
+    }
+    else if (status === 'delivered') {
+      if (Number(errand.helper_id) !== userId) return res.status(403).json({ msg: 'Unauthorized helper' });
+      query = 'UPDATE errands SET status = $1 WHERE id = $2 RETURNING *';
+      values = [status, id];
+      
+      // 🔔 ALERT: Tell Customer the errand is done and needs payment
+      await pool.query(
+        `INSERT INTO alerts (user_id, type, message, link_url) VALUES ($1, $2, $3, $4)`,
+        [errand.customer_id, 'errand_delivered', `"${errand.title}" has been marked as delivered! Please confirm to release payment.`, `/errand/${id}`]
+      );
     } 
     else if (status === 'completed') {
       if (Number(errand.customer_id) !== userId) return res.status(403).json({ msg: 'Unauthorized customer' });
       query = 'UPDATE errands SET status = $1, completed_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *';
       values = [status, id];
 
-      // Send the payment notification
+      // 🔔 ALERT: Tell Helper they got paid
       await pool.query(
-        'INSERT INTO notifications (user_id, content, type) VALUES ($1, $2, $3)',
-        [errand.helper_id, `Payment released for "${errand.title}"!`, 'payment']
+        `INSERT INTO alerts (user_id, type, message, link_url) VALUES ($1, $2, $3, $4)`,
+        [errand.helper_id, 'payment_released', `Payment has been released for "${errand.title}"!`, `/errand/${id}`]
       );
     } else {
       return res.status(400).json({ msg: 'Invalid status transition' });
@@ -126,7 +148,9 @@ router.put('/:id/status', auth, async (req, res) => {
 
     const updated = await pool.query(query, values);
     res.json(updated.rows[0]);
-  } catch (err) { res.status(500).send('Server Error'); }
+  } catch (err) { 
+    console.error("Errand Status Update Error:", err);
+    res.status(500).send('Server Error'); 
+  }
 });
-
 module.exports = router;

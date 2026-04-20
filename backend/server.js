@@ -45,6 +45,8 @@ app.use('/api/reports', reportRoutes);
 // Add this near your other routes in server.js
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/reviews', require('./routes/reviews'));
+app.use('/api/alerts', require('./routes/alerts'));
+app.use('/api/badges', require('./routes/badges'));
 
 // ==========================================
 // 🔔 GLOBAL NOTIFICATIONS & CHAT ROUTES
